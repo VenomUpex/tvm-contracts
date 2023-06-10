@@ -21,9 +21,14 @@ dotenv.config();
 const LOCAL_NETWORK_ENDPOINT = process.env.NETWORK_ENDPOINT || "http://localhost:5000/graphql";
 const DEV_NET_NETWORK_ENDPOINT = process.env.DEV_NET_NETWORK_ENDPOINT || "https://devnet-sandbox.evercloud.dev/graphql";
 
-const VENOM_TESTNET_ENDPOINT = process.env.VENOM_TESTNET_ENDPOINT || "https://jrpc-devnet.venom.foundation/";
+const VENOM_TESTNET_ENDPOINT = process.env.VENOM_TESTNET_ENDPOINT || "https://jrpc-testnet.venom.foundation/rpc";
 const VENOM_TESTNET_TRACE_ENDPOINT =
-  process.env.VENOM_TESTNET_TRACE_ENDPOINT || "https://gql-devnet.venom.network/graphql";
+  process.env.VENOM_TESTNET_TRACE_ENDPOINT || "https://gql-testnet.venom.foundation/graphql";
+
+
+const VENOM_DEVNET_ENDPOINT = process.env.VENOM_DEVNET_ENDPOINT || "https://jrpc-devnet.venom.foundation/";
+const VENOM_DEVNET_TRACE_ENDPOINT =
+  process.env.VENOM_DEVNET_TRACE_ENDPOINT || "https://gql-devnet.venom.network/graphql";
 
 // Create your own link on https://dashboard.evercloud.dev/
 const MAIN_NET_NETWORK_ENDPOINT = process.env.MAIN_NET_NETWORK_ENDPOINT || "https://mainnet.evercloud.dev/XXX/graphql";
@@ -126,12 +131,36 @@ const config: LockliftConfig = {
         },
       },
       giver: {
-        address: "0:0000000000000000000000000000000000000000000000000000000000000000",
-        phrase: "phrase",
-        accountId: 0,
+        address: "0:7314b0ab6eee6ce296f480504cf04797d03839778281c71cb9d60c987c783456",
+        phrase: process.env.MAIN_SEED_PHRASE ?? "",
+        accountId: 0
       },
       tracing: {
         endpoint: VENOM_TESTNET_TRACE_ENDPOINT,
+      },
+      keys: {
+        // Use everdev to generate your phrase
+        // !!! Never commit it in your repos !!!
+        phrase: process.env.MAIN_SEED_PHRASE || "",
+        amount: 20,
+      },
+    },
+    venom_devnet: {
+      connection: {
+        id: 1000,
+        type: "jrpc",
+        group: "dev",
+        data: {
+          endpoint: VENOM_DEVNET_ENDPOINT,
+        },
+      },
+      giver: {
+        address: "0:7314b0ab6eee6ce296f480504cf04797d03839778281c71cb9d60c987c783456",
+        phrase: process.env.MAIN_SEED_PHRASE ?? "",
+        accountId: 0
+      },
+      tracing: {
+        endpoint: VENOM_DEVNET_TRACE_ENDPOINT,
       },
       keys: {
         // Use everdev to generate your phrase

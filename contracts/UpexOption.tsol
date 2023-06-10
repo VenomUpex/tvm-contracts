@@ -42,9 +42,10 @@ contract UpexOption is IUpexOption {
         uint32 _commitEnd,
         uint32 _close,
         uint128 _openPrice,
-        uint128 _closePrice
+        uint128 _closePrice,
+        uint32 _multiplier
     ) {
-        return (id, market_id, root, platform_code, currentVersion, start, commitEnd, close, openPrice, closePrice);
+        return (id, market_id, root, platform_code, currentVersion, start, commitEnd, close, openPrice, closePrice, multiplier);
     }
 
     function setClosePrice(uint128 close_price) external reserve onlyRoot override {

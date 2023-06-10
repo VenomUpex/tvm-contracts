@@ -109,7 +109,7 @@ export const setupTokenRoot = async function (token_name: string, token_symbol: 
     return new Token(_root, owner);
 }
 
-export const setupUpexRoot = async function(owner: Account, launcher_pubkey: string, usdt: Contract<any>): Promise<Contract<UpexRootAbi>> {
+export const setupUpexRoot = async function(owner: Address, launcher_pubkey: string, usdt: Address): Promise<Contract<UpexRootAbi>> {
     const signer = await locklift.keystore.getSigner('0');
     const UpexAccount = await locklift.factory.getContractArtifacts('UpexAccount');
     const UpexOption = await locklift.factory.getContractArtifacts('UpexOption');
@@ -124,12 +124,12 @@ export const setupUpexRoot = async function(owner: Account, launcher_pubkey: str
             platformCode: Platform.code
         },
         constructorParams: {
-            _owner: owner.address,
-            _usdt: usdt.address,
+            _owner: owner,
+            _usdt: usdt,
             _launcher_pubkey: `0x${launcher_pubkey}`
         },
         publicKey: signer?.publicKey as string,
-        value: toNano(2)
+        value: toNano(5)
     }));
 
     return _root;

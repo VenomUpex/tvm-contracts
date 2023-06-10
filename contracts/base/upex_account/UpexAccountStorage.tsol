@@ -11,7 +11,7 @@ abstract contract UpexAccountStorage is IUpexAccount {
     address user;
 
     // market_id => (option_id => Commit)
-    mapping (uint32 => mapping(uint32 => Commit)) commits;
+    mapping (uint32 => mapping(uint32 => Commit)) public commits;
 
     TvmCell platform_code;
 

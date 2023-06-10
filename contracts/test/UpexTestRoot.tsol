@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "../base/upex_root/UpexRootBase.tsol";
+import "locklift/src/console.tsol";
+
+
+contract UpexRoot is UpexRootBase {
+    constructor(
+        address _owner,
+        uint256 _launcher_pubkey,
+        address _usdt
+    ) public {
+        require (msg.pubkey() == tvm.pubkey(), 101);
+        tvm.accept();
+
+        owner = _owner;
+        optionLauncherPubkey = _launcher_pubkey;
+        usdt = _usdt;
+
+        _setupTokenWallets();
+    }
+
+    function spawnOptions(uint32 market_id, uint128[] prices) external {
+        require (markets.exists(market_id), Errors.BAD_INPUT);
+        Market _market = markets[market_id];
+        // owner or special bot
+        require (msg.sender == owner || msg.pubkey() == optionLauncherPubkey, Errors.NOT_OWNER);
+        if (msg.sender.value == 0) tvm.accept(); // looks like we have external call from our bot
+        if (msg.sender.value > 0) require (msg.value >= Gas.MIN_MSG_VALUE, Errors.LOW_MSG_VALUE);
+
+        tvm.rawReserve(math.max(address(this).balance - Gas.MIN_MSG_VALUE, CONTRACT_MIN_BALANCE), 0);
+
+        uint count = prices.length;
+
+        for (uint32 i = 1; i <= count; i++) {
+            _market.curOptionId += 1;
+            _market.curOptionStart = uint32(now - 86400 * (count - i));
+            markets[market_id] = _market;
+
+            _deployUpexOption(
+                market_id,
+                _market,
+                prices[i - 1]
+            );
+
+            if (_market.curOptionId > 1) {
+                // close old one
+                IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+                    prices[i - 1]
+                );
+            }
+        }
+    }
+
+    function upgrade(TvmCell newcode) external onlyOwner {
+        TvmCell data = abi.encode(
+            deploy_nonce,
+            upexAccountCode,
+            upexOptionCode,
+            platformCode,
+            upexAccountVersion,
+            upexOptionVersion,
+            usdt, // 6 decimals
+            usdtWallet,
+            usdtBalance,
+            owner,
+            paused,
+            optionLauncherPubkey,
+            marketCount,
+            markets,
+            pendingCommits,
+            req_nonce
+        );
+
+        // set code after complete this method
+        tvm.setcode(newcode);
+
+        // run onCodeUpgrade from new newcode
+        tvm.setCurrentCode(newcode);
+        onCodeUpgrade(data);
+    }
+
+    function onCodeUpgrade(TvmCell upgrade_data) private {}
+}

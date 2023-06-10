@@ -3,8 +3,7 @@ import {Token} from "./utils/wrappers/token";
 import {TokenWallet} from "./utils/wrappers/token_wallet";
 import {Contract, getRandomNonce, lockliftChai, toNano} from "locklift";
 import chai, {expect} from "chai";
-import {TokenRootUpgradeableAbi, UpexRootAbi} from "../build/factorySource";
-import {sign} from "crypto";
+import {TokenRootUpgradeableAbi, UpexRootAbi, UpexTestRootAbi} from "../build/factorySource";
 import {bn} from "./utils/common";
 
 const logger = require("mocha-logger");
@@ -75,6 +74,14 @@ describe('Testing liquidity pool mechanics', async function() {
       }).send({from: owner.address, amount: toNano(1)}));
     });
 
+    // it("Test", async function() {
+    //   const {traceTree} = await locklift.tracing.trace(root.methods.spawnOptions({
+    //     market_id: 0, prices: [1000 * PRICE_DECIMALS, 2000 * PRICE_DECIMALS]
+    //   }).send({from: owner.address, amount: toNano(2.1)}));
+    //
+    //   await traceTree?.beautyPrint();
+    // });
+
     it('Launch option', async function() {
       const {traceTree} = await locklift.tracing.trace(root.methods.launchNewOption({
         market_id: 0, market_price: 1000 * PRICE_DECIMALS
@@ -123,6 +130,12 @@ describe('Testing liquidity pool mechanics', async function() {
     });
 
     it('Option closes, new option opens', async function() {
+      // const acc = await root.methods.getUpexAccountAddress({user: user1.address, answerId: 1}).call();
+      // const acc_c = await locklift.factory.getDeployedContract('UpexAccount', acc.value0);
+      //
+      // const res = await acc_c.methods.commits({}).call();
+      // console.log(res, JSON.stringify(res));
+
       const signer = (await locklift.keystore.getSigner("0"))!;
 
       await locklift.testing.increaseTime(24 * 3600 + 1);
