@@ -9,4 +9,5 @@ library Gas {
 
     uint128 constant UPEX_ACCOUNT_DEPLOY_VALUE = 0.5 ever;
     uint128 constant UPEX_ACC_UPGRADE_VALUE = 1 ever;
+    uint128 constant UPEX_OPTION_DEPLOY_VALUE = 0.15 ever;
 }

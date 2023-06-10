@@ -12,6 +12,11 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         emit NewOwner(meta.call_id, new_owner);
     }
 
+    function setLauncherPubkey(uint256 pubkey, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        optionLauncherPubkey = pubkey;
+        emit NewLauncherPubkey(meta.call_id, pubkey);
+    }
+
     function setPause(bool new_state, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
         paused = new_state;
         emit Pause(meta.call_id, new_state);
@@ -19,6 +24,30 @@ abstract contract UpexRootBase is UpexRootUpgradable {
 
     function receiveTokenWalletAddress(address wallet) external override {
         if (msg.sender == usdt) usdtWallet = wallet;
+    }
+
+    // @dev Yes, we manually set price for option, because there is no oracle services at the moment
+    // On mainnet we can connect it to chainlink (for example through bridge) or whatever
+    function launchOption(uint32 market_id, uint128 market_price) external reserve {
+        require (markets.exists(market_id), Errors.BAD_INPUT);
+        Market _market = markets[market_id];
+        // its too early for new option
+        require (_market.curOptionStart + _market.optionTtl < now, Errors.OPTION_ALREADY_OPENED);
+        // owner or special bot
+        require (msg.sender == owner || msg.pubkey() == optionLauncherPubkey, Errors.NOT_OWNER);
+        if (msg.sender.value == 0) tvm.accept(); // looks like we have external call from our bot
+        if (msg.sender.value > 0) require (msg.value >= Gas.MIN_MSG_VALUE, Errors.LOW_MSG_VALUE);
+
+        _market.curOptionId += 1;
+        _market.curOptionStart = now;
+
+        markets[market_id] = _market;
+
+        _deployUpexOption(
+            market_id,
+            _market,
+            market_price
+        );
     }
 
     function onAcceptTokensTransfer(

@@ -17,4 +17,5 @@ library Errors {
     uint16 constant NOT_UPEX_ACCOUNT = 2000;
     uint16 constant NOT_UPEX_OPTION = 2001;
     uint16 constant NOT_ROOT = 2002;
+    uint16 constant OPTION_ALREADY_OPENED = 2003;
 }

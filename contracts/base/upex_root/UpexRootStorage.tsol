@@ -19,6 +19,7 @@ abstract contract UpexRootStorage is IUpexRoot {
 
     address owner;
     bool paused;
+    uint256 optionLauncherPubkey;
 
     uint16 marketCount;
 

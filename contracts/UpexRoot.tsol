@@ -4,7 +4,45 @@ pragma ever-solidity >= 0.62.0;
 import "./base/upex_root/UpexRootBase.tsol";
 
 contract UpexRoot is UpexRootBase {
-    constructor() public {
+    constructor(
+        address _owner,
+        uint256 _launcher_pubkey,
+        address _usdt
+    ) public {
+        owner = _owner;
+        optionLauncherPubkey = _launcher_pubkey;
+        usdt = _usdt;
 
+        _setupTokenWallets();
     }
+
+    function upgrade(TvmCell newcode) external onlyOwner {
+        TvmCell data = abi.encode(
+            deploy_nonce,
+            upexAccountCode,
+            upexOptionCode,
+            platformCode,
+            upexAccountVersion,
+            upexOptionVersion,
+            usdt, // 6 decimals
+            usdtWallet,
+            usdtBalance,
+            owner,
+            paused,
+            optionLauncherPubkey,
+            marketCount,
+            markets,
+            pendingCommits,
+            req_nonce
+        );
+
+        // set code after complete this method
+        tvm.setcode(newcode);
+
+        // run onCodeUpgrade from new newcode
+        tvm.setCurrentCode(newcode);
+        onCodeUpgrade(data);
+    }
+
+    function onCodeUpgrade(TvmCell upgrade_data) private {}
 }

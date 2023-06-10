@@ -79,14 +79,27 @@ abstract contract UpexRootUpgradable is UpexRootHelpers {
     }
 
     function _deployUpexAccount(address user) internal view returns (address) {
-        TvmBuilder constructor_params;
-
-        constructor_params.store(upexAccountVersion); // 32
-        constructor_params.store(upexAccountVersion); // 32
-
         return new Platform{
             stateInit: _buildInitData(_buildUpexAccountParams(user), PlatformTypes.UpexAccount),
             value: Gas.UPEX_ACCOUNT_DEPLOY_VALUE
-        }(upexAccountCode, constructor_params.toCell(), user);
+        }(upexAccountCode, abi.encode(upexAccountVersion, upexAccountVersion), user);
+    }
+
+    function onUpexOptionDeploy(uint32 option_id, uint32 market_id) external view override onlyUpexOption(option_id, market_id) {
+        emit UpexOptionDeploy(0, option_id, market_id);
+    }
+
+    // should be called only inside launchOption after all necessary checks and changes
+    function _deployUpexOption(uint32 market_id, Market market, uint128 market_price) internal view returns (address) {
+        TvmCell constructor_params = abi.encode(
+            upexOptionVersion,
+            upexOptionVersion,
+            market,
+            market_price
+        );
+        return new Platform{
+            stateInit: _buildInitData(_buildUpexOptionsParams(market.curOptionId, market_id), PlatformTypes.UpexOption),
+            value: Gas.UPEX_OPTION_DEPLOY_VALUE
+        }(upexOptionCode, constructor_params, address(this));
     }
 }

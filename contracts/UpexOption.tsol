@@ -1,8 +1,130 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma ever-solidity >= 0.62.0;
 
-contract UpexOption {
-    constructor() public {
 
+import "@broxus/contracts/contracts/libraries/MsgFlag.tsol";
+import "./libraries/Gas.tsol";
+import "./libraries/Callback.tsol";
+import "./libraries/PlatformTypes.tsol";
+import "./libraries/Errors.tsol";
+import "./libraries/Constants.tsol";
+import "./interfaces/IUpexRoot.tsol";
+
+
+contract UpexOption {
+    uint32 static id;
+    uint32 static market_id;
+
+    address root;
+    TvmCell platform_code;
+    uint32 currentVersion;
+
+    uint32 start;
+    uint32 close;
+    uint32 expiration;
+
+    uint128 openPrice;
+    uint128 closePrice;
+
+    uint128 constant CONTRACT_MIN_BALANCE = 0.1 ever;
+
+    function getDetails() external view returns (
+        uint32 _id,
+        uint32 _market_id,
+        address _root,
+        TvmCell _platform_code,
+        uint32 _currentVersion,
+        uint32 _start,
+        uint32 _close,
+        uint32 _expiration,
+        uint128 _openPrice,
+        uint128 _closePrice
+    ) {
+        return (id, market_id, root, platform_code, currentVersion, start, close, expiration, openPrice, closePrice);
+    }
+
+    function setClosePrice(uint128 close_price) external reserve onlyRoot {
+        closePrice = close_price;
+        // this call is triggered by bot/owner, so that we can just send gas to root contract
+        msg.sender.transfer({ value: 0, flag: MsgFlag.ALL_NOT_RESERVED });
+    }
+
+    function _reserve() internal pure returns (uint128) {
+        return math.max(address(this).balance - msg.value, CONTRACT_MIN_BALANCE);
+    }
+
+    modifier reserve() {
+        tvm.rawReserve(_reserve(), 0);
+        _;
+    }
+
+    modifier onlyRoot() {
+        require (msg.sender == root, Errors.NOT_ROOT);
+        _;
+    }
+
+    function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external override onlyRoot {
+        if (new_version == currentVersion) {
+            tvm.rawReserve(_reserve(), 0);
+            meta.send_gas_to.transfer({ value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED });
+            return;
+        }
+
+        uint8 _tmp;
+        TvmBuilder main_builder;
+        main_builder.store(root); // address 267
+        main_builder.store(_tmp); // 8
+        main_builder.store(meta.send_gas_to); // address 267
+
+        main_builder.storeRef(platform_code); // ref
+
+        TvmBuilder initial;
+        initial.store(id, market_id);
+
+        main_builder.storeRef(initial); // ref 2
+
+        TvmBuilder params;
+        params.store(new_version);
+        params.store(currentVersion);
+
+        main_builder.storeRef(params); // ref3
+
+        TvmCell storage_data = abi.encode(start, close, expiration, openPrice, closePrice);
+        TvmCell data = abi.encode(meta.call_id, storage_data);
+
+        main_builder.storeRef(data); // ref3
+
+        tvm.setcode(new_code);
+        // run onCodeUpgrade from new code
+        tvm.setCurrentCode(new_code);
+        onCodeUpgrade(main_builder.toCell());
+    }
+
+
+    function onCodeUpgrade(TvmCell upgrade_data) private {
+        tvm.resetStorage();
+        tvm.rawReserve(_reserve(), 0);
+
+        TvmSlice s = upgrade_data.toSlice();
+        (address root_,,) = s.decode(address, uint8, address);
+        root = root_;
+
+        platform_code = s.loadRef();
+
+        TvmSlice initialData = s.loadRefAsSlice();
+        (id, market_id) = initialData.decode(uint32, uint32);
+
+        TvmSlice params = s.loadRefAsSlice();
+        (uint32 _currentVersion,,IUpexRoot.Market _market, uint128 price) = params.decode(uint32, uint32, IUpexRoot.Market, uint128);
+
+        currentVersion = _currentVersion;
+        start = _market.curOptionStart;
+        close = start + _market.optionOpenDuration;
+        expiration = start + _market.optionTtl;
+        openPrice = price;
+
+        IUpexRoot(root).onUpexOptionDeploy{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+            id, market_id
+        );
     }
 }
