@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "./UpexRootHelpers.tsol";
+import "./UpexRootUpgradable.tsol";
+
+abstract contract UpexRootBase is UpexRootUpgradable {
+    function receiveTokenWalletAddress(address wallet) external override {
+        if (msg.sender == usdt) usdtWallet = wallet;
+    }
+}

@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "../../interfaces/IUpexRoot.tsol";
+
+
+abstract contract UpexRootStorage is IUpexRoot {
+    uint32 static deploy_nonce;
+
+    TvmCell static upexAccountCode;
+    TvmCell static upexOptionCode;
+    TvmCell static platformCode;
+    uint32 upexAccountVersion;
+    uint32 upexOptionVersion;
+
+    address usdt; // 6 decimals
+    address usdtWallet;
+    uint128 usdtBalance;
+
+    address owner;
+    bool paused;
+
+    uint16 marketCount;
+
+    struct Market {
+        string ticker; // e.g BTC
+
+        uint32 curOptionId;
+        uint32 curOptionStart;
+        uint32 optionTtl; // 24 hours by default
+
+        uint32 winMultiplier; // 3 decimals
+    }
+
+    uint128 constant CONTRACT_MIN_BALANCE = 1 ever;
+}

@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "../libraries/Callback.tsol";
+
+
+interface IUpexRoot {
+    function receiveTokenWalletAddress(address wallet) external;
+    function onUpexAccountDeploy(address user, Callback.CallMeta meta) external view;
+    function onUpexAccountUpgrade(
+        address user,
+        uint32 old_version,
+        uint32 new_version,
+        Callback.CallMeta meta
+    ) external view;
+
+
+    event Pause(uint32 call_id, bool new_state);
+    event NewOwner(uint32 call_id, address new_owner);
+    event UpexAccountCodeUpdate(uint32 call_id, uint32 old_version, uint32 new_version);
+    event UpexOptionCodeUpdate(uint32 call_id, uint32 old_version, uint32 new_version);
+    event UpexAccountUpgrade(uint32 call_id, address user, uint32 old_version, uint32 new_version);
+    event UpexAccountDeploy(uint32 call_id, address user);
+    event ActionRevert(uint32 call_id, address user);
+}

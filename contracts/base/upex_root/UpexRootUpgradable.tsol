@@ -1,0 +1,92 @@
+pragma ever-solidity ^0.62.0;
+
+
+import "broxus-token-contracts/contracts/interfaces/ITokenRootUpgradeable.tsol";
+import "broxus-token-contracts/contracts/interfaces/ITokenWalletUpgradeable.tsol";
+import "broxus-token-contracts/contracts/interfaces/IAcceptTokensTransferCallback.tsol";
+import "@broxus/contracts/contracts/libraries/MsgFlag.tsol";
+import "../../libraries/Gas.tsol";
+import "../../libraries/Callback.tsol";
+import "../../libraries/Errors.tsol";
+import "../../libraries/Callback.tsol";
+import "../../interfaces/IUpexAccount.tsol";
+import {RPlatform as Platform} from "../../Platform.tsol";
+import "./UpexRootHelpers.tsol";
+
+
+abstract contract UpexRootUpgradable is UpexRootHelpers {
+    function updateUpexAccountCode(TvmCell code, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        upexAccountCode = code;
+        upexAccountVersion += 1;
+        emit UpexAccountCodeUpdate(meta.call_id, upexAccountVersion - 1, upexAccountVersion);
+    }
+
+    function updateUpexOptionCode(TvmCell code, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        upexOptionCode = code;
+        upexOptionVersion += 1;
+        emit UpexOptionCodeUpdate(meta.call_id, upexOptionVersion - 1, upexOptionVersion);
+    }
+
+    function upgradeUpexAccount(Callback.CallMeta meta) external view reserve {
+        require (msg.value >= Gas.UPEX_ACC_UPGRADE_VALUE, Errors.LOW_MSG_VALUE);
+
+        _upgradeUpexAccountByUser(msg.sender, 0, meta);
+    }
+
+    function forceUpgradeUpexAccountsByUsers(address[] users, Callback.CallMeta meta) external view onlyOwner reserve {
+        require (msg.value >= Gas.UPEX_ACC_UPGRADE_VALUE * (users.length + 1), Errors.LOW_MSG_VALUE);
+
+        for (uint i = 0; i < users.length; i++) {
+            _upgradeUpexAccountByUser(users[i], Gas.UPEX_ACC_UPGRADE_VALUE, meta);
+        }
+    }
+
+    function forceUpgradeUpexAccountsByContracts(address[] contracts, Callback.CallMeta meta) external view onlyOwner reserve {
+        require (msg.value >= Gas.UPEX_ACC_UPGRADE_VALUE * (contracts.length + 1), Errors.LOW_MSG_VALUE);
+
+        for (uint i = 0; i < contracts.length; i++) {
+            _upgradeUpexAccountByContract(contracts[i], Gas.UPEX_ACC_UPGRADE_VALUE, meta);
+        }
+    }
+
+    function _upgradeUpexAccountByContract(address upex_acc, uint128 value, Callback.CallMeta meta) internal view {
+        uint16 flag = value == 0 ? MsgFlag.ALL_NOT_RESERVED : 0;
+        IUpexAccount(upex_acc).upgrade{ value: value, flag: flag }(upexAccountCode, upexAccountVersion, meta);
+    }
+
+    function _upgradeUpexAccountByUser(address user, uint128 value, Callback.CallMeta meta) internal view {
+        address upex_acc = getUpexAccountAddress(user);
+        uint16 flag = value == 0 ? MsgFlag.ALL_NOT_RESERVED : 0;
+        IUpexAccount(upex_acc).upgrade{ value: value, flag: flag }(upexAccountCode, upexAccountVersion, meta);
+    }
+
+    function onUpexAccountUpgrade(
+        address user,
+        uint32 old_version,
+        uint32 new_version,
+        Callback.CallMeta meta
+    ) external view override onlyUpexAccount(user) reserveAndSendGas(meta) {
+        emit UpexAccountUpgrade(meta.call_id, user, old_version, new_version);
+    }
+
+    function onUpexAccountDeploy(address user, Callback.CallMeta meta) external view override onlyUpexAccount(user) reserveAndSendGas(meta) {
+        emit UpexAccountDeploy(meta.call_id, user);
+    }
+
+    function deployUpexAccount(Callback.CallMeta meta) external view responsible reserveAndSendGas(meta) returns (address account) {
+        require (msg.value > Gas.UPEX_ACCOUNT_DEPLOY_VALUE, Errors.LOW_MSG_VALUE);
+        account = _deployUpexAccount(msg.sender);
+    }
+
+    function _deployUpexAccount(address user) internal view returns (address) {
+        TvmBuilder constructor_params;
+
+        constructor_params.store(upexAccountVersion); // 32
+        constructor_params.store(upexAccountVersion); // 32
+
+        return new Platform{
+            stateInit: _buildInitData(_buildUpexAccountParams(user), PlatformTypes.UpexAccount),
+            value: Gas.UPEX_ACCOUNT_DEPLOY_VALUE
+        }(upexAccountCode, constructor_params.toCell(), user);
+    }
+}

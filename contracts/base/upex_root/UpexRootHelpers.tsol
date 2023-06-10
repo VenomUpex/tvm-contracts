@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "./UpexRootStorage.tsol";
+import "../../libraries/Gas.tsol";
+import "../../libraries/PlatformTypes.tsol";
+import "../../libraries/Callback.tsol";
+import "../../libraries/Errors.tsol";
+import "../../interfaces/IUpexRoot.tsol";
+import {RPlatform as Platform} from "../../Platform.tsol";
+
+import "@broxus/contracts/contracts/libraries/MsgFlag.tsol";
+import "broxus-token-contracts/contracts/interfaces/ITokenRootUpgradeable.tsol";
+import "broxus-token-contracts/contracts/interfaces/ITokenWalletUpgradeable.tsol";
+
+
+abstract contract UpexRootHelpers is UpexRootStorage {
+    function getCodes() external view responsible returns (
+        TvmCell _platformCode,
+        TvmCell _upexAccountCode,
+        TvmCell _upexOptionCode,
+        uint32 _upexAccountVersion,
+        uint32 _upexOptionVersion
+    ) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS }(
+            platformCode,
+            upexAccountCode,
+            upexOptionCode,
+            upexAccountVersion,
+            upexOptionVersion
+        );
+    }
+
+    function _setupTokenWallets() internal view {
+        ITokenRoot(usdt).deployWallet{value: Gas.TOKEN_WALLET_DEPLOY_VALUE, callback: IUpexRoot.receiveTokenWalletAddress }(
+            address(this), // owner
+            Gas.TOKEN_WALLET_DEPLOY_VALUE / 2 // deploy grams
+        );
+    }
+
+    function getUpexAccountAddress(address user) public view responsible returns (address) {
+        return { value: 0, flag: MsgFlag.REMAINING_GAS, bounce: false } address(
+            tvm.hash(_buildInitData(_buildUpexAccountParams(user), PlatformTypes.UpexAccount))
+        );
+    }
+
+    function getUpexOptionAddress(uint32 id) public view responsible returns (address) {
+        return { value: 0, flag: MsgFlag.REMAINING_GAS, bounce: false } address(
+            tvm.hash(_buildInitData(_buildUpexOptionsParams(id), PlatformTypes.UpexOption))
+        );
+    }
+
+    modifier onlyUpexAccount(address user) {
+        address upex_account_addr = getUpexAccountAddress(user);
+        require (msg.sender == upex_account_addr, Errors.NOT_UPEX_ACCOUNT);
+        _;
+    }
+
+    modifier onlyUpexOption(uint32 id) {
+        address upex_option_addr = getUpexOptionAddress(id);
+        require (msg.sender == upex_option_addr, Errors.NOT_UPEX_OPTION);
+        _;
+    }
+
+    function _buildUpexAccountParams(address user) internal pure returns (TvmCell) {
+        return abi.encode(user);
+    }
+
+    function _buildUpexOptionsParams(uint32 id) internal pure returns (TvmCell) {
+        return abi.encode(id);
+    }
+
+    function _buildInitData(TvmCell _initialData, uint8 platformType) internal view returns (TvmCell) {
+        return tvm.buildStateInit({
+            contr: Platform,
+            varInit: {
+                root: address(this),
+                platformType: platformType,
+                initialData: _initialData,
+                platformCode: platformCode
+            },
+            pubkey: 0,
+            code: platformCode
+        });
+    }
+
+    function _transfer(
+        address wallet, uint128 amount, address receiver, TvmCell payload, address send_gas_to, uint16 flag
+    ) internal pure {
+        uint128 value = flag != MsgFlag.ALL_NOT_RESERVED ? Gas.TOKEN_TRANSFER_VALUE : 0;
+        bool notify = false;
+        // notify = true if payload is non-empty
+        TvmSlice slice = payload.toSlice();
+        if (slice.bits() > 0 || slice.refs() > 0) {
+            notify = true;
+        }
+        ITokenWallet(wallet).transfer{value: value, flag: flag}(
+            amount,
+            receiver,
+            0,
+            send_gas_to,
+            notify,
+            payload
+        );
+    }
+
+    function _reserve() internal pure returns (uint128) {
+        return math.max(address(this).balance - msg.value, CONTRACT_MIN_BALANCE);
+    }
+
+    modifier reserve() {
+        tvm.rawReserve(_reserve(), 0);
+        _;
+    }
+
+    modifier reserveAndSendGas(Callback.CallMeta meta) {
+        tvm.rawReserve(_reserve(), 0);
+        _;
+        meta.send_gas_to.transfer(0, false, MsgFlag.ALL_NOT_RESERVED);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, Errors.NOT_OWNER);
+        _;
+    }
+
+    modifier onlyActive() {
+        require (!paused || msg.sender == owner, Errors.NOT_ACTIVE);
+        _;
+    }
+}
