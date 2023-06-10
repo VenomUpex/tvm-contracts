@@ -1,3 +1,6 @@
+# Contract schema
+
+![Contract schema](https://cdn.dorahacks.io/static/files/188a55ed8aff4cf520ae0eb483286810.jpeg "Contracts")
 # Setup
 
 ## Install dependencies
