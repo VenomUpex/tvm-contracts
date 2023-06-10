@@ -9,9 +9,12 @@ import "./libraries/PlatformTypes.tsol";
 import "./libraries/Errors.tsol";
 import "./libraries/Constants.tsol";
 import "./interfaces/IUpexRoot.tsol";
+import "./interfaces/IUpexOption.tsol";
+import "./interfaces/IUpexAccount.tsol";
+import {RPlatform as Platform} from "Platform.tsol";
 
 
-contract UpexOption {
+contract UpexOption is IUpexOption {
     uint32 static id;
     uint32 static market_id;
 
@@ -19,9 +22,10 @@ contract UpexOption {
     TvmCell platform_code;
     uint32 currentVersion;
 
-    uint32 start;
-    uint32 close;
-    uint32 expiration;
+    uint32 start; // option open
+    uint32 close; // option close for betting
+    uint32 expiration; // option expire
+    uint32 multiplier;
 
     uint128 openPrice;
     uint128 closePrice;
@@ -44,9 +48,26 @@ contract UpexOption {
     }
 
     function setClosePrice(uint128 close_price) external reserve onlyRoot {
+        require (closePrice == 0, Errors.ALREADY_CLOSED);
+        require (now >= expiration, Errors.NOT_EXPIRED);
+
         closePrice = close_price;
         // this call is triggered by bot/owner, so that we can just send gas to root contract
         msg.sender.transfer({ value: 0, flag: MsgFlag.ALL_NOT_RESERVED });
+    }
+
+    function process_claimReward(address user, Callback.CallMeta meta) external view reserve onlyRoot override {
+        // soft fail because we want to emit event on root and return gas
+        if (now < expiration || closePrice == 0) {
+            IUpexRoot(msg.sender).option_revert_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+                user, market_id, id, meta
+            );
+            return;
+        }
+
+        IUpexAccount(getUpexAccountAddress(user)).process_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+            id, market_id, openPrice, closePrice, multiplier, meta
+        );
     }
 
     function _reserve() internal pure returns (uint128) {
@@ -61,6 +82,28 @@ contract UpexOption {
     modifier onlyRoot() {
         require (msg.sender == root, Errors.NOT_ROOT);
         _;
+    }
+
+    function getUpexAccountAddress(address user) internal view returns (address) {
+        return address(tvm.hash(_buildInitData(_buildUpexAccountParams(user), PlatformTypes.UpexAccount)));
+    }
+
+    function _buildUpexAccountParams(address user) internal pure returns (TvmCell) {
+        return abi.encode(user);
+    }
+
+    function _buildInitData(TvmCell _initialData, uint8 platformType) internal view returns (TvmCell) {
+        return tvm.buildStateInit({
+            contr: Platform,
+            varInit: {
+                root: root,
+                platformType: platformType,
+                initialData: _initialData,
+                platformCode: platform_code
+            },
+            pubkey: 0,
+            code: platform_code
+        });
     }
 
     function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external override onlyRoot {
@@ -89,7 +132,7 @@ contract UpexOption {
 
         main_builder.storeRef(params); // ref3
 
-        TvmCell storage_data = abi.encode(start, close, expiration, openPrice, closePrice);
+        TvmCell storage_data = abi.encode(start, close, expiration, openPrice, closePrice, multiplier);
         TvmCell data = abi.encode(meta.call_id, storage_data);
 
         main_builder.storeRef(data); // ref3
@@ -122,6 +165,7 @@ contract UpexOption {
         close = start + _market.optionOpenDuration;
         expiration = start + _market.optionTtl;
         openPrice = price;
+        multiplier = _market.winMultiplier;
 
         IUpexRoot(root).onUpexOptionDeploy{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
             id, market_id

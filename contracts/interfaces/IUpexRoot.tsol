@@ -32,6 +32,17 @@ interface IUpexRoot is IAcceptTokensTransferCallback {
 
     function revert_saveCommit(address user, uint32 req_nonce) external;
     function finish_saveCommit(address user, uint32 req_nonce) external;
+
+    function option_revert_claimReward(
+        address user, uint32 market_id, uint32 option_id, Callback.CallMeta meta
+    ) external view;
+    function account_revert_claimReward(
+        address user, Callback.CallMeta meta
+    ) external view;
+    function finish_claimReward(
+        address user, uint128 win_amount, Callback.CallMeta meta
+    ) external;
+
     function receiveTokenWalletAddress(address wallet) external;
     function onUpexAccountDeploy(address user, Callback.CallMeta meta) external view;
     function onUpexAccountUpgrade(
@@ -53,4 +64,5 @@ interface IUpexRoot is IAcceptTokensTransferCallback {
     event UpexOptionDeploy(uint32 call_id, uint32 option_id, uint32 market_id);
     event ActionRevert(uint32 call_id, address user);
     event CommitSaved(uint32 call_id, PendingCommit commit);
+    event RewardClaim(uint32 call_id, address user, uint128 win_amount);
 }

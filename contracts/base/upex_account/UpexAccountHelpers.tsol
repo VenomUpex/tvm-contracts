@@ -12,10 +12,37 @@ import {RPlatform as Platform} from "../../Platform.tsol";
 
 
 abstract contract UpexAccountHelpers is UpexAccountStorage {
+    function getUpexOptionAddress(uint32 option_id, uint32 market_id) internal view returns (address) {
+        return address(tvm.hash(_buildInitData(_buildUpexOptionsParams(option_id, market_id), PlatformTypes.UpexOption)));
+    }
+
+    function _buildUpexOptionsParams(uint32 option_id, uint32 market_id) internal pure returns (TvmCell) {
+        return abi.encode(option_id, market_id);
+    }
+
+    function _buildInitData(TvmCell _initialData, uint8 platformType) internal view returns (TvmCell) {
+        return tvm.buildStateInit({
+            contr: Platform,
+            varInit: {
+                root: root,
+                platformType: platformType,
+                initialData: _initialData,
+                platformCode: platform_code
+            },
+            pubkey: 0,
+            code: platform_code
+        });
+    }
+
+    modifier onlyUpexOption(uint32 option_id, uint32 market_id) {
+        address upex_option_addr = getUpexOptionAddress(option_id, market_id);
+        require (msg.sender == upex_option_addr, Errors.NOT_UPEX_OPTION);
+        _;
+    }
+
     function _reserve() internal pure returns (uint128) {
         return math.max(address(this).balance - msg.value, CONTRACT_MIN_BALANCE);
     }
-
 
     modifier reserve() {
         tvm.rawReserve(_reserve(), 0);

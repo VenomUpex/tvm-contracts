@@ -4,6 +4,7 @@ pragma ever-solidity >= 0.62.0;
 import "./UpexRootHelpers.tsol";
 import "./UpexRootUpgradable.tsol";
 import "../../libraries/Constants.tsol";
+import "../../interfaces/IUpexOption.tsol";
 
 
 abstract contract UpexRootBase is UpexRootUpgradable {
@@ -126,12 +127,55 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         commit.meta.send_gas_to.transfer(0, false, MsgFlag.ALL_NOT_RESERVED);
     }
 
+    function claimReward(uint32 option_id, uint32 market_id, Callback.CallMeta meta) external view reserve {
+        require (msg.value >= Gas.MIN_MSG_VALUE, Errors.LOW_MSG_VALUE);
+        require (markets.exists(market_id), Errors.BAD_INPUT);
+
+        Market _market = markets[market_id];
+        require (option_id <= _market.curOptionId, Errors.BAD_INPUT);
+
+        IUpexOption(getUpexOptionAddress(option_id, market_id)).process_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+            msg.sender,
+            meta
+        );
+    }
+
+    function option_revert_claimReward(
+        address user, uint32 market_id, uint32 option_id, Callback.CallMeta meta
+    ) external view reserveAndSendGas(meta) onlyUpexOption(option_id, market_id) override {
+        emit ActionRevert(meta.call_id, user);
+    }
+
+    function account_revert_claimReward(
+        address user, Callback.CallMeta meta
+    ) external view reserveAndSendGas(meta) onlyUpexAccount(user) override {
+        emit ActionRevert(meta.call_id, user);
+    }
+
+    function finish_claimReward(
+        address user, uint128 win_amount, Callback.CallMeta meta
+    ) external reserve onlyUpexAccount(user) override {
+        // we suggest we always have enough balance to pay
+        usdtBalance -= win_amount;
+
+        TvmCell empty;
+        emit RewardClaim(meta.call_id, user, win_amount);
+        _transfer(
+            usdtWallet,
+            win_amount,
+            user,
+            empty,
+            meta.send_gas_to,
+            MsgFlag.ALL_NOT_RESERVED
+        );
+    }
+
     onBounce(TvmSlice slice) external {
         tvm.accept();
 
         uint32 functionId = slice.decode(uint32);
 
-//         if processing failed - contract was not deployed. Deploy and try again
+        // if processing failed - contract was not deployed. Deploy and try again
         if (functionId == tvm.functionId(IUpexAccount.process_saveCommit)) {
             tvm.rawReserve(_reserve(), 0);
             uint32 _request_nonce = slice.decode(uint32);

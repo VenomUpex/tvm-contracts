@@ -13,5 +13,13 @@ interface IUpexAccount {
     }
 
     function process_saveCommit(uint32 req_nonce, IUpexRoot.PendingCommit commit) external;
+    function process_claimReward(
+        uint32 option_id,
+        uint32 market_id,
+        uint128 openPrice,
+        uint128 closePrice,
+        uint32 multiplier,
+        Callback.CallMeta meta
+    ) external;
     function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external;
 }

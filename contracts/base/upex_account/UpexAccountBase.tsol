@@ -13,4 +13,32 @@ abstract contract UpexAccountBase is UpexAccountHelpers {
         commits[commit.market_id][commit.option_id] = Commit(commit.amount, commit.direction);
         IUpexRoot(msg.sender).finish_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, req_nonce);
     }
+
+    function process_claimReward(
+        uint32 option_id,
+        uint32 market_id,
+        uint128 openPrice,
+        uint128 closePrice,
+        uint32 multiplier,
+        Callback.CallMeta meta
+    ) external reserve onlyUpexOption(option_id, market_id) override {
+        if (!commits[market_id].exists(option_id)) {
+            IUpexRoot(root).account_revert_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, meta);
+            return;
+        }
+
+        Commit _commit = commits[market_id][option_id];
+        delete commits[market_id][option_id];
+
+        if (
+            closePrice < openPrice && _commit.direction == IUpexRoot.BetDirection.Up ||
+            closePrice > openPrice && _commit.direction == IUpexRoot.BetDirection.Down
+        ) {
+            IUpexRoot(root).account_revert_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, meta);
+            return;
+        }
+
+        uint128 win_amount = _commit.amount * multiplier / Constants.MULTIPLIER_DECIMALS;
+        IUpexRoot(root).finish_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, win_amount, meta);
+    }
 }

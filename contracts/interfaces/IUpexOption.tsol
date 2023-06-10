@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+
+import "../libraries/Callback.tsol";
+
+
+interface IUpexOption {
+    function process_claimReward(address user, Callback.CallMeta meta) external view;
+    function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external;
+}

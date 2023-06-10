@@ -5,4 +5,5 @@ library Constants {
     uint128 constant SCALING_FACTOR = 10**18;
     uint128 constant USDT_DECIMALS = 10**6;
     uint128 constant PRICE_DECIMALS = 10**8; // chainlink standard
+    uint128 constant MULTIPLIER_DECIMALS = 10**3;
 }
