@@ -8,7 +8,7 @@ export default async () => {
         signerId: "0", // locklift.keystore.getSigner("0") <- id for getting access to the signer
         accountSettings: {
           type: WalletTypes.EverWallet,
-          value: locklift.utils.toNano(50),
+          value: locklift.utils.toNano(150),
         },
       },
       {
@@ -16,7 +16,7 @@ export default async () => {
         signerId: "1",
         accountSettings: {
           type: WalletTypes.EverWallet,
-          value: locklift.utils.toNano(50),
+          value: locklift.utils.toNano(150),
         },
       },
       {
@@ -24,7 +24,7 @@ export default async () => {
         signerId: "2",
         accountSettings: {
           type: WalletTypes.EverWallet,
-          value: locklift.utils.toNano(50),
+          value: locklift.utils.toNano(150),
         },
       }
     ],

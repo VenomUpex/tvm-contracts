@@ -32,7 +32,7 @@ abstract contract UpexAccountBase is UpexAccountHelpers {
 
         if (
             closePrice < openPrice && _commit.direction == IUpexRoot.BetDirection.Up ||
-            closePrice > openPrice && _commit.direction == IUpexRoot.BetDirection.Down
+            closePrice >= openPrice && _commit.direction == IUpexRoot.BetDirection.Down
         ) {
             IUpexRoot(root).account_revert_claimReward{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, meta);
             return;

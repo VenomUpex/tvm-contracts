@@ -65,6 +65,7 @@ interface IUpexRoot is IAcceptTokensTransferCallback {
     event UpexAccountDeploy(uint32 call_id, address user);
     event UpexOptionDeploy(uint32 call_id, address option, uint32 option_id, uint32 market_id);
     event ActionRevert(uint32 call_id, address user);
+    event UsdtDeposit(uint128 amount, address user);
     event CommitSaved(uint32 call_id, PendingCommit commit);
     event RewardClaim(uint32 call_id, address user, uint128 win_amount);
 }

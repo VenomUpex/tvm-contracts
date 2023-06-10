@@ -1,0 +1,34 @@
+[
+  {
+    "ticker": "BTC",
+    "curOptionId": 0,
+    "curOptionStart": 0,
+    "optionTtl": 86400,
+    "optionOpenDuration": 64800,
+    "winMultiplier": 2000
+  },
+  {
+    "ticker": "ETH",
+    "curOptionId": 0,
+    "curOptionStart": 0,
+    "optionTtl": 86400,
+    "optionOpenDuration": 64800,
+    "winMultiplier": 2000
+  },
+  {
+    "ticker": "TSLA",
+    "curOptionId": 0,
+    "curOptionStart": 0,
+    "optionTtl": 86400,
+    "optionOpenDuration": 64800,
+    "winMultiplier": 2500
+  },
+  {
+    "ticker": "AAPL",
+    "curOptionId": 0,
+    "curOptionStart": 0,
+    "optionTtl": 86400,
+    "optionOpenDuration": 64800,
+    "winMultiplier": 1500
+  }
+]

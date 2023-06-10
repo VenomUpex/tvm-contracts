@@ -5,7 +5,7 @@ import "../base/upex_root/UpexRootBase.tsol";
 import "locklift/src/console.tsol";
 
 
-contract UpexRoot is UpexRootBase {
+contract UpexTestRoot is UpexRootBase {
     constructor(
         address _owner,
         uint256 _launcher_pubkey,
@@ -29,8 +29,6 @@ contract UpexRoot is UpexRootBase {
         if (msg.sender.value == 0) tvm.accept(); // looks like we have external call from our bot
         if (msg.sender.value > 0) require (msg.value >= Gas.MIN_MSG_VALUE, Errors.LOW_MSG_VALUE);
 
-        tvm.rawReserve(math.max(address(this).balance - Gas.MIN_MSG_VALUE, CONTRACT_MIN_BALANCE), 0);
-
         uint count = prices.length;
 
         for (uint32 i = 1; i <= count; i++) {
@@ -46,7 +44,7 @@ contract UpexRoot is UpexRootBase {
 
             if (_market.curOptionId > 1) {
                 // close old one
-                IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+                IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0.5 ever, flag: 0}(
                     prices[i - 1]
                 );
             }

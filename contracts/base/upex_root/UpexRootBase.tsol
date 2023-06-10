@@ -103,6 +103,13 @@ abstract contract UpexRootBase is UpexRootUpgradable {
     ) external override reserve {
         require (msg.sender == usdtWallet, Errors.NOT_TOKEN_WALLET);
 
+        // only owner can deposit usdt
+        if (sender == owner) {
+            usdtBalance += amount;
+            emit UsdtDeposit(amount, sender);
+            return;
+        }
+
         (
             uint32 market_id,
             BetDirection direction,
