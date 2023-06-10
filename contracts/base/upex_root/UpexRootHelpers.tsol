@@ -15,6 +15,26 @@ import "broxus-token-contracts/contracts/interfaces/ITokenWalletUpgradeable.tsol
 
 
 abstract contract UpexRootHelpers is UpexRootStorage {
+    function getDetails() external view responsible returns (
+        address _usdt,
+        address _usdtWallet,
+        uint128 _usdtBalance,
+        address _owner,
+        bool _paused,
+        uint256 _optionLauncherPubkey,
+        uint16 _marketCount
+    ) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS }(
+            usdt,
+            usdtWallet,
+            usdtBalance,
+            owner,
+            paused,
+            optionLauncherPubkey,
+            marketCount
+        );
+    }
+
     function getCodes() external view responsible returns (
         TvmCell _platformCode,
         TvmCell _upexAccountCode,

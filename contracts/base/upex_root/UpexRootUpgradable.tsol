@@ -86,7 +86,7 @@ abstract contract UpexRootUpgradable is UpexRootHelpers {
     }
 
     function onUpexOptionDeploy(uint32 option_id, uint32 market_id) external view override onlyUpexOption(option_id, market_id) {
-        emit UpexOptionDeploy(0, option_id, market_id);
+        emit UpexOptionDeploy(0, msg.sender, option_id, market_id);
     }
 
     // should be called only inside launchOption after all necessary checks and changes

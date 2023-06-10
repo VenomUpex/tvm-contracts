@@ -1,11 +1,24 @@
-import { LockliftConfig } from "locklift";
-import { FactorySource } from "./build/factorySource";
+import {LockliftConfig} from "locklift";
+import {FactorySource} from "./build/factorySource";
+import * as dotenv from "dotenv";
+import "locklift-verifier";
+import "locklift-deploy";
+import { Deployments } from "locklift-deploy";
 
 declare global {
   const locklift: import("locklift").Locklift<FactorySource>;
 }
 
-const LOCAL_NETWORK_ENDPOINT = process.env.NETWORK_ENDPOINT || "http://localhost/graphql";
+declare module "locklift" {
+  //@ts-ignore
+  export interface Locklift {
+    deployments: Deployments<FactorySource>;
+  }
+}
+dotenv.config();
+
+
+const LOCAL_NETWORK_ENDPOINT = process.env.NETWORK_ENDPOINT || "http://localhost:5000/graphql";
 const DEV_NET_NETWORK_ENDPOINT = process.env.DEV_NET_NETWORK_ENDPOINT || "https://devnet-sandbox.evercloud.dev/graphql";
 
 const VENOM_TESTNET_ENDPOINT = process.env.VENOM_TESTNET_ENDPOINT || "https://jrpc-devnet.venom.foundation/";
@@ -16,6 +29,12 @@ const VENOM_TESTNET_TRACE_ENDPOINT =
 const MAIN_NET_NETWORK_ENDPOINT = process.env.MAIN_NET_NETWORK_ENDPOINT || "https://mainnet.evercloud.dev/XXX/graphql";
 
 const config: LockliftConfig = {
+  verifier: {
+    verifierVersion: "latest", // contract verifier binary, see https://github.com/broxus/everscan-verify
+    apiKey: process.env.VERIFIER_KEY || "",
+    secretKey: process.env.VERIFIER_SECRET || "",
+    // license: "AGPL-3.0-or-later", <- this is default value and can be overrided
+  },
   compiler: {
     // Specify path to your TON-Solidity-Compiler
     // path: "/mnt/o/projects/broxus/TON-Solidity-Compiler/build/solc/solc",
@@ -24,9 +43,14 @@ const config: LockliftConfig = {
     version: "0.62.0",
 
     // Specify config for extarnal contracts as in exapmple
-    // externalContracts: {
-    //   "node_modules/broxus-ton-tokens-contracts/build": ['TokenRoot', 'TokenWallet']
-    // }
+    // Specify config for external contracts as in example
+    externalContracts: {
+      "node_modules/broxus-token-contracts/build": [
+        'TokenRootUpgradeable',
+        'TokenWalletUpgradeable',
+        'TokenWalletPlatform'
+      ]
+    }
   },
   linker: {
     // Specify path to your stdlib
@@ -37,6 +61,7 @@ const config: LockliftConfig = {
     // Or specify version of linker
     version: "0.15.48",
   },
+
   networks: {
     local: {
       // Specify connection settings for https://github.com/broxus/everscale-standalone-client/
@@ -111,7 +136,7 @@ const config: LockliftConfig = {
       keys: {
         // Use everdev to generate your phrase
         // !!! Never commit it in your repos !!!
-        // phrase: "action inject penalty envelope rabbit element slim tornado dinner pizza off blood",
+        phrase: process.env.MAIN_SEED_PHRASE || "",
         amount: 20,
       },
     },

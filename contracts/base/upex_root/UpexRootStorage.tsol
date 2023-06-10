@@ -23,7 +23,7 @@ abstract contract UpexRootStorage is IUpexRoot {
 
     uint16 marketCount;
 
-    mapping (uint32 => Market) markets;
+    mapping (uint32 => Market) public markets;
     mapping (uint32 => PendingCommit) pendingCommits;
 
     uint32 req_nonce;

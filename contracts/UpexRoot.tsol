@@ -9,6 +9,9 @@ contract UpexRoot is UpexRootBase {
         uint256 _launcher_pubkey,
         address _usdt
     ) public {
+        require (msg.pubkey() == tvm.pubkey(), 101);
+        tvm.accept();
+
         owner = _owner;
         optionLauncherPubkey = _launcher_pubkey;
         usdt = _usdt;

@@ -27,8 +27,8 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         if (msg.sender == usdt) usdtWallet = wallet;
     }
 
-    function addMarkets(Market[] markets, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
-        for (Market _market: markets) {
+    function addMarkets(Market[] new_markets, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        for (Market _market: new_markets) {
             require (_market.optionTtl > _market.optionOpenDuration, Errors.BAD_INPUT);
             require (_market.winMultiplier > Constants.MULTIPLIER_DECIMALS, Errors.BAD_INPUT);
             require (_market.optionTtl > 0, Errors.BAD_INPUT);
@@ -40,8 +40,8 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         }
     }
 
-    function updateMarket(mapping (uint32 => Market) markets, Callback.CallMeta meta) external view onlyOwner reserveAndSendGas(meta) {
-        for ((uint32 market_id, Market _market) : markets) {
+    function updateMarket(mapping (uint32 => Market) up_markets, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        for ((uint32 market_id, Market _market) : up_markets) {
             require (_market.optionTtl > _market.optionOpenDuration, Errors.BAD_INPUT);
             require (_market.winMultiplier > Constants.MULTIPLIER_DECIMALS, Errors.BAD_INPUT);
             require (_market.optionTtl > 0, Errors.BAD_INPUT);
@@ -84,10 +84,12 @@ abstract contract UpexRootBase is UpexRootUpgradable {
             market_price
         );
 
-        // close old one
-        IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
-            market_price
-        );
+        if (_market.curOptionId > 1) {
+            // close old one
+            IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+                market_price
+            );
+        }
     }
 
 
@@ -110,7 +112,7 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         bool exception = !correct || !markets.exists(market_id) || paused || msg.value < Gas.MIN_MSG_VALUE;
 
         if (!exception) {
-            exception = exception && _handleTokenTransfer(market_id, direction, amount, sender, Callback.CallMeta(call_id, remainingGasTo));
+            exception = exception || !_handleTokenTransfer(market_id, direction, amount, sender, Callback.CallMeta(call_id, remainingGasTo));
         }
 
         if (exception) {
@@ -210,7 +212,7 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         );
     }
 
-    onBounce(TvmSlice slice) external {
+    onBounce(TvmSlice slice) external view {
         tvm.accept();
 
         uint32 functionId = slice.decode(uint32);
@@ -220,7 +222,6 @@ abstract contract UpexRootBase is UpexRootUpgradable {
             tvm.rawReserve(_reserve(), 0);
             uint32 _request_nonce = slice.decode(uint32);
             PendingCommit _commit = pendingCommits[_request_nonce];
-            delete pendingCommits[_request_nonce];
 
             address upex_acc = _deployUpexAccount(_commit.user);
             IUpexAccount(upex_acc).process_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
