@@ -18,6 +18,7 @@ declare module "locklift" {
 dotenv.config();
 
 
+const TEST_SEED_PHRASE = 'action inject penalty envelope rabbit element slim tornado dinner pizza off blood';
 const LOCAL_NETWORK_ENDPOINT = process.env.NETWORK_ENDPOINT || "http://localhost:5000/graphql";
 const DEV_NET_NETWORK_ENDPOINT = process.env.DEV_NET_NETWORK_ENDPOINT || "https://devnet-sandbox.evercloud.dev/graphql";
 
@@ -132,7 +133,7 @@ const config: LockliftConfig = {
       },
       giver: {
         address: "0:7314b0ab6eee6ce296f480504cf04797d03839778281c71cb9d60c987c783456",
-        phrase: process.env.MAIN_SEED_PHRASE ?? "",
+        phrase: process.env.MAIN_SEED_PHRASE || TEST_SEED_PHRASE,
         accountId: 0
       },
       tracing: {
@@ -141,7 +142,7 @@ const config: LockliftConfig = {
       keys: {
         // Use everdev to generate your phrase
         // !!! Never commit it in your repos !!!
-        phrase: process.env.MAIN_SEED_PHRASE || "",
+        phrase: process.env.MAIN_SEED_PHRASE || TEST_SEED_PHRASE,
         amount: 20,
       },
     },
@@ -156,7 +157,7 @@ const config: LockliftConfig = {
       },
       giver: {
         address: "0:7314b0ab6eee6ce296f480504cf04797d03839778281c71cb9d60c987c783456",
-        phrase: process.env.MAIN_SEED_PHRASE ?? "",
+        phrase: process.env.MAIN_SEED_PHRASE || TEST_SEED_PHRASE,
         accountId: 0
       },
       tracing: {
@@ -165,7 +166,7 @@ const config: LockliftConfig = {
       keys: {
         // Use everdev to generate your phrase
         // !!! Never commit it in your repos !!!
-        phrase: process.env.MAIN_SEED_PHRASE || "",
+        phrase: process.env.MAIN_SEED_PHRASE || TEST_SEED_PHRASE,
         amount: 20,
       },
     },

@@ -1,5 +1,5 @@
 {
-  "name": "Upex",
+  "name": "upex",
   "version": "1.0.0",
   "description": "Decentralized binary options platform",
   "scripts": {
@@ -12,7 +12,7 @@
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^20.2.5",
-    "broxus-token-contracts": "github:broxus/tip3#480c1b4481d1dddb028b408b20ba8c19abd1a4a4",
+    "broxus-token-contracts": "github:broxus/tip3",
     "everscan-verify": "^1.6.1",
     "locklift-verifier": "^1.0.3",
     "locklift-deploy": "^1.0.2",
