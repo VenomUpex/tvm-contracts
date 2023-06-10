@@ -27,9 +27,41 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         if (msg.sender == usdt) usdtWallet = wallet;
     }
 
+    function addMarkets(Market[] markets, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        for (Market _market: markets) {
+            require (_market.optionTtl > _market.optionOpenDuration, Errors.BAD_INPUT);
+            require (_market.winMultiplier > Constants.MULTIPLIER_DECIMALS, Errors.BAD_INPUT);
+            require (_market.optionTtl > 0, Errors.BAD_INPUT);
+            require (_market.optionOpenDuration > 0, Errors.BAD_INPUT);
+
+            markets[marketCount] = _market;
+            marketCount++;
+            emit NewMarket(meta.call_id, _market);
+        }
+    }
+
+    function updateMarket(mapping (uint32 => Market) markets, Callback.CallMeta meta) external view onlyOwner reserveAndSendGas(meta) {
+        for ((uint32 market_id, Market _market) : markets) {
+            require (_market.optionTtl > _market.optionOpenDuration, Errors.BAD_INPUT);
+            require (_market.winMultiplier > Constants.MULTIPLIER_DECIMALS, Errors.BAD_INPUT);
+            require (_market.optionTtl > 0, Errors.BAD_INPUT);
+            require (_market.optionOpenDuration > 0, Errors.BAD_INPUT);
+
+            require (markets.exists(market_id), Errors.BAD_INPUT);
+            Market old_market = markets[market_id];
+            old_market.ticker = _market.ticker;
+            old_market.winMultiplier = _market.winMultiplier;
+            old_market.optionTtl = _market.optionTtl;
+            old_market.optionOpenDuration = _market.optionOpenDuration;
+            markets[market_id] = old_market;
+            emit UpdateMarket(meta.call_id, market_id, _market);
+        }
+    }
+
     // @dev Yes, we manually set price for option, because there is no oracle services at the moment
     // On mainnet we can connect it to chainlink (for example through bridge) or whatever
-    function launchOption(uint32 market_id, uint128 market_price) external reserve {
+    // @notice Close current option and launch new one
+    function launchNewOption(uint32 market_id, uint128 market_price) external {
         require (markets.exists(market_id), Errors.BAD_INPUT);
         Market _market = markets[market_id];
         // its too early for new option
@@ -38,6 +70,8 @@ abstract contract UpexRootBase is UpexRootUpgradable {
         require (msg.sender == owner || msg.pubkey() == optionLauncherPubkey, Errors.NOT_OWNER);
         if (msg.sender.value == 0) tvm.accept(); // looks like we have external call from our bot
         if (msg.sender.value > 0) require (msg.value >= Gas.MIN_MSG_VALUE, Errors.LOW_MSG_VALUE);
+
+        tvm.rawReserve(math.max(address(this).balance - Gas.MIN_MSG_VALUE, CONTRACT_MIN_BALANCE), 0);
 
         _market.curOptionId += 1;
         _market.curOptionStart = now;
@@ -49,7 +83,13 @@ abstract contract UpexRootBase is UpexRootUpgradable {
             _market,
             market_price
         );
+
+        // close old one
+        IUpexOption(getUpexOptionAddress(_market.curOptionId - 1, market_id)).setClosePrice{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+            market_price
+        );
     }
+
 
     function onAcceptTokensTransfer(
         address,

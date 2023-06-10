@@ -57,6 +57,8 @@ interface IUpexRoot is IAcceptTokensTransferCallback {
     event Pause(uint32 call_id, bool new_state);
     event NewOwner(uint32 call_id, address new_owner);
     event NewLauncherPubkey(uint32 call_id, uint256 pubkey);
+    event NewMarket(uint32 call_id, Market new_market);
+    event UpdateMarket(uint32 call_id, uint32 market_id, Market new_market);
     event UpexAccountCodeUpdate(uint32 call_id, uint32 old_version, uint32 new_version);
     event UpexOptionCodeUpdate(uint32 call_id, uint32 old_version, uint32 new_version);
     event UpexAccountUpgrade(uint32 call_id, address user, uint32 old_version, uint32 new_version);

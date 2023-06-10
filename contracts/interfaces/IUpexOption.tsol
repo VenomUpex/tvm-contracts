@@ -6,6 +6,7 @@ import "../libraries/Callback.tsol";
 
 
 interface IUpexOption {
+    function setClosePrice(uint128 close_price) external;
     function process_claimReward(address user, Callback.CallMeta meta) external view;
     function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external;
 }
