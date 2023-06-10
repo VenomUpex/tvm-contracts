@@ -22,15 +22,9 @@ abstract contract UpexRootStorage is IUpexRoot {
 
     uint16 marketCount;
 
-    struct Market {
-        string ticker; // e.g BTC
+    mapping (uint32 => Market) markets;
+    mapping (uint32 => PendingCommit) pendingCommits;
 
-        uint32 curOptionId;
-        uint32 curOptionStart;
-        uint32 optionTtl; // 24 hours by default
-
-        uint32 winMultiplier; // 3 decimals
-    }
-
+    uint32 req_nonce;
     uint128 constant CONTRACT_MIN_BALANCE = 1 ever;
 }

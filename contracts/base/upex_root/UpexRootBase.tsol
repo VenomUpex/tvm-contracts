@@ -3,9 +3,116 @@ pragma ever-solidity >= 0.62.0;
 
 import "./UpexRootHelpers.tsol";
 import "./UpexRootUpgradable.tsol";
+import "../../libraries/Constants.tsol";
+
 
 abstract contract UpexRootBase is UpexRootUpgradable {
+    function transferOwnership(address new_owner, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        owner = new_owner;
+        emit NewOwner(meta.call_id, new_owner);
+    }
+
+    function setPause(bool new_state, Callback.CallMeta meta) external onlyOwner reserveAndSendGas(meta) {
+        paused = new_state;
+        emit Pause(meta.call_id, new_state);
+    }
+
     function receiveTokenWalletAddress(address wallet) external override {
         if (msg.sender == usdt) usdtWallet = wallet;
+    }
+
+    function onAcceptTokensTransfer(
+        address,
+        uint128 amount,
+        address sender,
+        address,
+        address remainingGasTo,
+        TvmCell payload
+    ) external override reserve {
+        require (msg.sender == usdtWallet, Errors.NOT_TOKEN_WALLET);
+
+        (
+            uint32 market_id,
+            BetDirection direction,
+            uint32 call_id,
+            bool correct
+        ) = decodeTokenTransfer(payload);
+        bool exception = !correct || !markets.exists(market_id) || paused || msg.value < Gas.MIN_MSG_VALUE;
+
+        if (!exception) {
+            exception = exception && _handleTokenTransfer(market_id, direction, amount, sender, Callback.CallMeta(call_id, remainingGasTo));
+        }
+
+        if (exception) {
+            emit ActionRevert(call_id, sender);
+            _transfer(msg.sender, amount, sender, payload, remainingGasTo, MsgFlag.ALL_NOT_RESERVED);
+        }
+    }
+
+    function _handleTokenTransfer(
+        uint32 market_id,
+        BetDirection bet,
+        uint128 amount,
+        address sender,
+        Callback.CallMeta meta
+    ) internal returns (bool) {
+        Market _market = markets[market_id];
+        // bet time is ended
+        if (_market.curOptionStart + _market.optionOpenDuration < now) return false;
+        usdtBalance += amount;
+
+        req_nonce += 1;
+        PendingCommit commit = PendingCommit(market_id, _market.curOptionId, bet, amount, sender, meta);
+        pendingCommits[req_nonce] = commit;
+
+        IUpexAccount(getUpexAccountAddress(sender)).process_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+            req_nonce,
+            commit
+        );
+        return true;
+    }
+
+    function revert_saveCommit(address user, uint32 req_nonce) external reserve onlyUpexAccount(user) override {
+        PendingCommit commit = pendingCommits[req_nonce];
+        delete pendingCommits[req_nonce];
+        usdtBalance -= commit.amount;
+
+        TvmCell empty;
+        emit ActionRevert(commit.meta.call_id, commit.user);
+        _transfer(
+            usdtWallet,
+            commit.amount,
+            commit.user,
+            empty,
+            commit.meta.send_gas_to,
+            MsgFlag.ALL_NOT_RESERVED
+        );
+    }
+
+    function finish_saveCommit(address user, uint32 req_nonce) external reserve onlyUpexAccount(user) override {
+        PendingCommit commit = pendingCommits[req_nonce];
+        delete pendingCommits[req_nonce];
+
+        emit CommitSaved(commit.meta.call_id, commit);
+        commit.meta.send_gas_to.transfer(0, false, MsgFlag.ALL_NOT_RESERVED);
+    }
+
+    onBounce(TvmSlice slice) external {
+        tvm.accept();
+
+        uint32 functionId = slice.decode(uint32);
+
+//         if processing failed - contract was not deployed. Deploy and try again
+        if (functionId == tvm.functionId(IUpexAccount.process_saveCommit)) {
+            tvm.rawReserve(_reserve(), 0);
+            uint32 _request_nonce = slice.decode(uint32);
+            PendingCommit _commit = pendingCommits[_request_nonce];
+            delete pendingCommits[_request_nonce];
+
+            address upex_acc = _deployUpexAccount(_commit.user);
+            IUpexAccount(upex_acc).process_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(
+                _request_nonce, _commit
+            );
+        }
     }
 }

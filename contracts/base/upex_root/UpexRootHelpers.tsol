@@ -31,6 +31,22 @@ abstract contract UpexRootHelpers is UpexRootStorage {
         );
     }
 
+    function encodeTokenTransfer(uint32 market_id, BetDirection bet, uint32 call_id) public pure returns (TvmCell payload) {
+        return abi.encode(market_id, bet, call_id);
+    }
+
+    function decodeTokenTransfer(TvmCell payload) public pure returns (uint32 market_id, BetDirection bet, uint32 call_id, bool correct) {
+        // check if payload assembled correctly
+        TvmSlice slice = payload.toSlice();
+        // 1 uint8 + 2 uint32 and 1 cell
+        (uint16 bits, uint8 refs) = slice.size();
+
+        if ((bits == 32 + 8 + 32) && (refs == 0)) {
+            (market_id, bet, call_id) = abi.decode(payload, (uint32, BetDirection, uint32));
+            correct = true;
+        }
+    }
+
     function _setupTokenWallets() internal view {
         ITokenRoot(usdt).deployWallet{value: Gas.TOKEN_WALLET_DEPLOY_VALUE, callback: IUpexRoot.receiveTokenWalletAddress }(
             address(this), // owner
@@ -44,9 +60,9 @@ abstract contract UpexRootHelpers is UpexRootStorage {
         );
     }
 
-    function getUpexOptionAddress(uint32 id) public view responsible returns (address) {
+    function getUpexOptionAddress(uint32 option_id, uint32 market_id) public view responsible returns (address) {
         return { value: 0, flag: MsgFlag.REMAINING_GAS, bounce: false } address(
-            tvm.hash(_buildInitData(_buildUpexOptionsParams(id), PlatformTypes.UpexOption))
+            tvm.hash(_buildInitData(_buildUpexOptionsParams(option_id, market_id), PlatformTypes.UpexOption))
         );
     }
 
@@ -56,8 +72,8 @@ abstract contract UpexRootHelpers is UpexRootStorage {
         _;
     }
 
-    modifier onlyUpexOption(uint32 id) {
-        address upex_option_addr = getUpexOptionAddress(id);
+    modifier onlyUpexOption(uint32 option_id, uint32 market_id) {
+        address upex_option_addr = getUpexOptionAddress(option_id, market_id);
         require (msg.sender == upex_option_addr, Errors.NOT_UPEX_OPTION);
         _;
     }
@@ -66,8 +82,8 @@ abstract contract UpexRootHelpers is UpexRootStorage {
         return abi.encode(user);
     }
 
-    function _buildUpexOptionsParams(uint32 id) internal pure returns (TvmCell) {
-        return abi.encode(id);
+    function _buildUpexOptionsParams(uint32 option_id, uint32 market_id) internal pure returns (TvmCell) {
+        return abi.encode(option_id, market_id);
     }
 
     function _buildInitData(TvmCell _initialData, uint8 platformType) internal view returns (TvmCell) {

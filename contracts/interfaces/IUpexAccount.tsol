@@ -3,8 +3,15 @@ pragma ever-solidity >= 0.62.0;
 
 
 import "../libraries/Callback.tsol";
+import "./IUpexRoot.tsol";
 
 
 interface IUpexAccount {
+    struct Commit {
+        uint128 amount;
+        IUpexRoot.BetDirection direction;
+    }
+
+    function process_saveCommit(uint32 req_nonce, IUpexRoot.PendingCommit commit) external;
     function upgrade(TvmCell new_code, uint32 new_version, Callback.CallMeta meta) external;
 }

@@ -2,9 +2,36 @@
 pragma ever-solidity >= 0.62.0;
 
 import "../libraries/Callback.tsol";
+import "broxus-token-contracts/contracts/interfaces/IAcceptTokensTransferCallback.tsol";
 
+interface IUpexRoot is IAcceptTokensTransferCallback {
+    enum BetDirection {
+        Up,
+        Down
+    }
 
-interface IUpexRoot {
+    struct Market {
+        string ticker; // e.g BTC
+
+        uint32 curOptionId;
+        uint32 curOptionStart; // timestamp of beginning
+        uint32 optionTtl; // 24 hours by default
+        uint32 optionOpenDuration; // 18 hours by default
+
+        uint32 winMultiplier; // 3 decimals, apply to newly created options
+    }
+
+    struct PendingCommit {
+        uint32 market_id;
+        uint32 option_id;
+        BetDirection direction;
+        uint128 amount;
+        address user;
+        Callback.CallMeta meta;
+    }
+
+    function revert_saveCommit(address user, uint32 req_nonce) external;
+    function finish_saveCommit(address user, uint32 req_nonce) external;
     function receiveTokenWalletAddress(address wallet) external;
     function onUpexAccountDeploy(address user, Callback.CallMeta meta) external view;
     function onUpexAccountUpgrade(
@@ -22,4 +49,5 @@ interface IUpexRoot {
     event UpexAccountUpgrade(uint32 call_id, address user, uint32 old_version, uint32 new_version);
     event UpexAccountDeploy(uint32 call_id, address user);
     event ActionRevert(uint32 call_id, address user);
+    event CommitSaved(uint32 call_id, PendingCommit commit);
 }

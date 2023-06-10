@@ -1,0 +1,19 @@
+pragma ever-solidity ^0.62.0;
+
+
+import "../../interfaces/IUpexAccount.tsol";
+
+
+abstract contract UpexAccountStorage is IUpexAccount {
+    uint32 currentVersion;
+
+    address root;
+    address user;
+
+    // market_id => (option_id => Commit)
+    mapping (uint32 => mapping(uint32 => Commit)) commits;
+
+    TvmCell platform_code;
+
+    uint128 constant CONTRACT_MIN_BALANCE = 0.4 ever;
+}

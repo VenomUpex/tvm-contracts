@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma ever-solidity >= 0.62.0;
+
+import "../../interfaces/IUpexRoot.tsol";
+import "./UpexAccountHelpers.tsol";
+
+abstract contract UpexAccountBase is UpexAccountHelpers {
+    function process_saveCommit(uint32 req_nonce, IUpexRoot.PendingCommit commit) external reserve onlyRoot override {
+        if (commits[commit.market_id].exists(commit.option_id)) {
+            IUpexRoot(msg.sender).revert_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, req_nonce);
+        }
+
+        commits[commit.market_id][commit.option_id] = Commit(commit.amount, commit.direction);
+        IUpexRoot(msg.sender).finish_saveCommit{value: 0, flag: MsgFlag.ALL_NOT_RESERVED}(user, req_nonce);
+    }
+}

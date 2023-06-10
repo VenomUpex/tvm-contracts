@@ -2,7 +2,6 @@ pragma ever-solidity ^0.62.0;
 
 
 library Errors {
-    // ERRORS
     // COMMON
     uint16 constant NOT_OWNER = 1000;
     uint16 constant NOT_ACTIVE = 1001;
@@ -15,7 +14,7 @@ library Errors {
     uint16 constant EMERGENCY = 1008;
     uint16 constant NOT_TOKEN_ROOT = 1009;
 
-    // VAULT
     uint16 constant NOT_UPEX_ACCOUNT = 2000;
     uint16 constant NOT_UPEX_OPTION = 2001;
+    uint16 constant NOT_ROOT = 2002;
 }
